@@ -1,0 +1,77 @@
+diff --git a/dist/yjs.cjs b/dist/yjs.cjs
+index a296aa30408893dc8cc59a083f4dc716aded29d0..26e0a33cd6c2af7857fe2af53211014c55cfa486 100644
+--- a/dist/yjs.cjs
++++ b/dist/yjs.cjs
+@@ -5767,6 +5767,8 @@ class YMap extends AbstractType {
+    * @return {Object<string,any>}
+    */
+   toJSON () {
++     console.warn('on cjs')
++
+     /**
+      * @type {Object<string,MapType>}
+      */
+diff --git a/dist/yjs.mjs b/dist/yjs.mjs
+index 005cc66e8dcd8aef9b2adf7a0eadc5a61b86667e..ef8394eac0cc8e2be0ccf230ed4aa8f55c58cdb8 100644
+--- a/dist/yjs.mjs
++++ b/dist/yjs.mjs
+@@ -5732,15 +5732,36 @@ class YMap extends AbstractType {
+    * @return {Object<string,any>}
+    */
+   toJSON () {
++    console.warn('on mjs!!!')
+     /**
+      * @type {Object<string,MapType>}
+      */
+     const map = {};
+     this._map.forEach((item, key) => {
+-      if (!item.deleted) {
+-        const v = item.content.getContent()[item.length - 1];
++      console.warn('last item',item, item.content.getContent(), item.id.client, item.id.clock,  item.deleted) 
++      let target = item
++      while(target && target.deleted){
++        console.log('shift left side', target, target.deleted, target.id.client, target.id.clock, target.content.getContent())
++        target = target.left
++      }
++      target = target || item
++      console.warn('switch item', item==target, item, target)
++      if(!target.deleted){
++        const v = target.content.getContent()[target.length - 1];
+         map[key] = v instanceof AbstractType ? v.toJSON() : v;
+       }
++
++      // if (!item.deleted) {
++      //   const v = item.content.getContent()[item.length - 1];
++      //   map[key] = v instanceof AbstractType ? v.toJSON() : v;
++      // }else{
++      //   console.warn('item deleted', item, item.id.client, item.id.clock, item.content)
++      //   const left = item.left
++      //   if(left){
++      //     console.warn('left item', left, left.id.client, left.id.clock, left.content)
++      //
++      //   }
++      // }
+     });
+     return map
+   }
+@@ -9685,6 +9706,7 @@ class Item extends AbstractStruct {
+    * @param {Transaction} transaction
+    */
+   delete (transaction) {
++    console.log('call delete', this.id.client, this.id.clock, JSON.stringify(this.content.getContent()), this)
+     if (!this.deleted) {
+       const parent = /** @type {AbstractType<any>} */ (this.parent);
+       // adjust the length of parent
+diff --git a/src/types/YMap.js b/src/types/YMap.js
+index c640ae543b51cc23b5f2332b377b71d65048c40c..74e57f99452502902b2c5d01b9b1d9e938ff783d 100644
+--- a/src/types/YMap.js
++++ b/src/types/YMap.js
+@@ -118,6 +118,8 @@ export class YMap extends AbstractType {
+    * @return {Object<string,any>}
+    */
+   toJSON () {
++     console.warn('on raw')
++
+     /**
+      * @type {Object<string,MapType>}
+      */

@@ -1,0 +1,105 @@
+diff --git a/dist/yjs.cjs b/dist/yjs.cjs
+index f75018804559a6baa2ae67ad89f1dd33a124b7d9..4e44b94ed75ee721a94e543a907c8344217b5127 100644
+--- a/dist/yjs.cjs
++++ b/dist/yjs.cjs
+@@ -5890,6 +5890,8 @@ class YMap extends AbstractType {
+    * @return {Object<string,any>}
+    */
+   toJSON () {
++     console.warn('on cjs')
++
+     /**
+      * @type {Object<string,MapType>}
+      */
+diff --git a/dist/yjs.mjs b/dist/yjs.mjs
+index 7b774a0130670e74fe41e04b4430ecb9066e1b7a..3dd34bae722b33b9bbd549652267bda9e0689d9f 100644
+--- a/dist/yjs.mjs
++++ b/dist/yjs.mjs
+@@ -1545,7 +1545,7 @@ const integrateStructs = (transaction, store, clientsStructRefs) => {
+           }
+         } else if (offset === 0 || offset < stackHead.length) {
+           // all fine, apply the stackhead
+-          stackHead.integrate(transaction, offset);
++          stackHead.integrate(transaction, offset, "integrateStructs");
+           state.set(stackHead.id.client, stackHead.id.clock + stackHead.length);
+         }
+       }
+@@ -5421,7 +5421,7 @@ const typeMapSet = (transaction, parent, key, value) => {
+         }
+     }
+   }
+-  new Item(createID(ownClientId, getState(doc.store, ownClientId)), left, left && left.lastId, null, null, parent, key, content).integrate(transaction, 0);
++  new Item(createID(ownClientId, getState(doc.store, ownClientId)), left, left && left.lastId, null, null, parent, key, content).integrate(transaction, 0, "typeMapSet");
+ };
+ 
+ /**
+@@ -5854,15 +5854,36 @@ class YMap extends AbstractType {
+    * @return {Object<string,any>}
+    */
+   toJSON () {
++    console.warn('on mjs!!!')
+     /**
+      * @type {Object<string,MapType>}
+      */
+     const map = {};
+     this._map.forEach((item, key) => {
+-      if (!item.deleted) {
+-        const v = item.content.getContent()[item.length - 1];
++      console.warn('last item',item, item.content.getContent(), item.id.client, item.id.clock,  item.deleted) 
++      let target = item
++      while(target && target.deleted){
++        console.log('shift left side', target, target.deleted, target.id.client, target.id.clock, target.content.getContent())
++        target = target.left
++      }
++      target = target || item
++      console.warn('switch item', item==target, item, target)
++      if(!target.deleted){
++        const v = target.content.getContent()[target.length - 1];
+         map[key] = v instanceof AbstractType ? v.toJSON() : v;
+       }
++
++      // if (!item.deleted) {
++      //   const v = item.content.getContent()[item.length - 1];
++      //   map[key] = v instanceof AbstractType ? v.toJSON() : v;
++      // }else{
++      //   console.warn('item deleted', item, item.id.client, item.id.clock, item.content)
++      //   const left = item.left
++      //   if(left){
++      //     console.warn('left item', left, left.id.client, left.id.clock, left.content)
++      //
++      //   }
++      // }
+     });
+     return map
+   }
+@@ -9612,7 +9633,8 @@ class Item extends AbstractStruct {
+    * @param {Transaction} transaction
+    * @param {number} offset
+    */
+-  integrate (transaction, offset) {
++  integrate (transaction, offset, caller) {
++    console.warn(caller, offset)
+     if (offset > 0) {
+       this.id.clock += offset;
+       this.left = getItemCleanEnd(transaction, transaction.doc.store, createID(this.id.client, this.id.clock - 1));
+@@ -9810,6 +9832,7 @@ class Item extends AbstractStruct {
+    * @param {Transaction} transaction
+    */
+   delete (transaction) {
++    console.log('call delete', this.id.client, this.id.clock, JSON.stringify(this.content.getContent()), this)
+     if (!this.deleted) {
+       const parent = /** @type {AbstractType<any>} */ (this.parent);
+       // adjust the length of parent
+diff --git a/src/types/YMap.js b/src/types/YMap.js
+index c640ae543b51cc23b5f2332b377b71d65048c40c..74e57f99452502902b2c5d01b9b1d9e938ff783d 100644
+--- a/src/types/YMap.js
++++ b/src/types/YMap.js
+@@ -118,6 +118,8 @@ export class YMap extends AbstractType {
+    * @return {Object<string,any>}
+    */
+   toJSON () {
++     console.warn('on raw')
++
+     /**
+      * @type {Object<string,MapType>}
+      */
